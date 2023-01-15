@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class PhoneNumber {
-    private final List<Integer> phoneNumbers;
+    private List<Integer> phoneNumbers;
 
     public PhoneNumber() {
         phoneNumbers = new ArrayList<>();
@@ -17,6 +17,10 @@ public class PhoneNumber {
 
     public void addNumber(Integer phoneNumber) {
         phoneNumbers.add(phoneNumber);
+    }
+
+    public void setPhoneNumbers(List<Integer> phoneNumbers) {
+        this.phoneNumbers = phoneNumbers;
     }
 
     @Override
