@@ -15,8 +15,10 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sns.model.CreateTopicRequest;
 import com.example.model.PhoneNumber;
-import com.example.utils.LambdaUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,8 +32,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.example.utils.LambdaUtils.CREDENTIALS;
 import static com.example.utils.LambdaUtils.PASSWORD;
 import static com.example.utils.LambdaUtils.RDS_URL;
+import static com.example.utils.LambdaUtils.REGION;
+import static com.example.utils.LambdaUtils.TOPIC_ARN;
 import static com.example.utils.LambdaUtils.USER_NAME;
 
 public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
@@ -51,10 +56,22 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
 
     private static final String HASH_KEY_NAME = "Id";
 
+    private static final String TOPIC = "phone-topic";
+
+    private static final String MESSAGE = "Read phones number from Dynamodb";
+
+    private static final CreateTopicRequest topicRequest = new CreateTopicRequest(TOPIC);
+
+    private static final AmazonSNSClient amazonSNSClient = (AmazonSNSClient) AmazonSNSClientBuilder
+            .standard()
+            .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
+            .withRegion(REGION)
+            .build();
+
     private static final AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder
             .standard()
             .withRegion(Regions.US_EAST_1)
-            .withCredentials(new AWSStaticCredentialsProvider(LambdaUtils.CREDENTIALS))
+            .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
             .build();
 
     private static final DynamoDB db = new DynamoDB(amazonDynamoDB);
@@ -74,10 +91,20 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
                     PhoneNumber filteredNumbers = filteringPhoneNumbers(phoneNumbers);
                     createTable();
                     savePhoneNumbersInDynamoDb(filteredNumbers);
+                    createSnsTopic();
+                    publishMessageToTheSnsTopic();
                 }
             }
         }
         return FUNCTION_EXECUTED_SUCCESSFULLY;
+    }
+
+    private static void createSnsTopic() {
+        amazonSNSClient.createTopic(topicRequest);
+    }
+
+    private static void publishMessageToTheSnsTopic() {
+        amazonSNSClient.publish(TOPIC_ARN, MESSAGE);
     }
 
     private static void createTable() {
@@ -101,10 +128,12 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
 
     private static void savePhoneNumbersInDynamoDb(PhoneNumber phoneNumbers) {
         table = db.getTable(TABLE_NAME);
+        LOGGER.info("Start writing phone numbers in DynamoDb");
         for (int i = 0; i < phoneNumbers.getPhoneNumbers().size(); i++) {
             table.putItem(new Item().withPrimaryKey(HASH_KEY_NAME, i)
                     .with(PHONE_NUMBER, phoneNumbers.getPhoneNumbers().get(i)));
         }
+        LOGGER.info("Phone number wrote in Dynamo db");
     }
 
     private static PhoneNumber filteringPhoneNumbers(PhoneNumber phoneNumbers) {
