@@ -18,7 +18,7 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
         }
 
         for (SQSEvent.SQSMessage message : event.getRecords()) {
-            System.out.println(new String(message.getBody()));
+            System.out.println(message.getBody());
         }
         return "";
     }
