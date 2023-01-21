@@ -36,45 +36,29 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
-
     private static final Logger LOGGER = LogManager.getLogger(SqsLambdaHandler.class);
-
     private static final String FINISH_PROCESSING_FUNCTION = "Finish processing lambda function because sqs event is empty";
-
     private static final String SELECT_PHONE_NUMBERS = "SELECT numbers FROM phone_numbers";
-
     private static final String MESSAGE_BODY_TEMPLATE = "phones saved";
-
     private static final String FUNCTION_EXECUTED_SUCCESSFULLY = "Function executed successfully";
-
     private static final String PHONE_NUMBER = "phoneNumber";
-
     private static final String TABLE_NAME = "phone_numbers";
-
     private static final String HASH_KEY_NAME = "Id";
-
     private static final String TOPIC = "phone-topic";
-
     private static final String MESSAGE = "Read phones number from Dynamodb";
-
     private static final CreateTopicRequest topicRequest = new CreateTopicRequest(TOPIC);
-
     private static final AWSCredentials CREDENTIALS = new BasicAWSCredentials(Settings.getAccessKey(), Settings.getSecretKey());
-
     private static final AmazonSNSClient amazonSNSClient = (AmazonSNSClient) AmazonSNSClientBuilder
             .standard()
             .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
             .withRegion(Regions.US_EAST_1)
             .build();
-
     private static final AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder
             .standard()
             .withRegion(Regions.US_EAST_1)
             .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
             .build();
-
     private static final DynamoDB db = new DynamoDB(amazonDynamoDB);
-
     private static Table table;
 
     @Override
