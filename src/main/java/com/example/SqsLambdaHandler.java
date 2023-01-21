@@ -1,6 +1,8 @@
 package com.example;
 
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -19,6 +21,7 @@ import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.amazonaws.services.sns.model.CreateTopicRequest;
 import com.example.model.PhoneNumber;
+import com.example.settings.Settings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,14 +35,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static com.example.utils.LambdaUtils.CREDENTIALS;
-import static com.example.utils.LambdaUtils.PASSWORD;
-import static com.example.utils.LambdaUtils.RDS_URL;
-import static com.example.utils.LambdaUtils.REGION;
-import static com.example.utils.LambdaUtils.TOPIC_ARN;
-import static com.example.utils.LambdaUtils.USER_NAME;
-
 public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
+
     private static final Logger LOGGER = LogManager.getLogger(SqsLambdaHandler.class);
 
     private static final String FINISH_PROCESSING_FUNCTION = "Finish processing lambda function because sqs event is empty";
@@ -62,10 +59,12 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
 
     private static final CreateTopicRequest topicRequest = new CreateTopicRequest(TOPIC);
 
+    private static final AWSCredentials CREDENTIALS = new BasicAWSCredentials(Settings.getAccessKey(), Settings.getSecretKey());
+
     private static final AmazonSNSClient amazonSNSClient = (AmazonSNSClient) AmazonSNSClientBuilder
             .standard()
             .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
-            .withRegion(REGION)
+            .withRegion(Regions.US_EAST_1)
             .build();
 
     private static final AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder
@@ -104,7 +103,7 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
     }
 
     private static void publishMessageToTheSnsTopic() {
-        amazonSNSClient.publish(TOPIC_ARN, MESSAGE);
+        amazonSNSClient.publish(Settings.getTopicArn(), MESSAGE);
     }
 
     private static void createTable() {
@@ -153,7 +152,7 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
 
     private static PhoneNumber readPhoneNumbersFromRdsDb() {
         PhoneNumber phoneNumbers = new PhoneNumber();
-        try (Connection connection = DriverManager.getConnection(RDS_URL, USER_NAME, PASSWORD);
+        try (Connection connection = DriverManager.getConnection(Settings.getRdsUrl(), Settings.getUserName(), Settings.getPassword());
              Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery(SELECT_PHONE_NUMBERS);
             LOGGER.info("Try to read phone numbers from db");
