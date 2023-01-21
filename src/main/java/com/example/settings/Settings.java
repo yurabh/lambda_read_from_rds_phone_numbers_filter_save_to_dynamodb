@@ -1,7 +1,6 @@
 package com.example.settings;
 
 public class Settings {
-
     private Settings() {
     }
 

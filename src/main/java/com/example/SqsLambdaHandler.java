@@ -3,7 +3,6 @@ package com.example;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -48,14 +47,15 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
     private static final String MESSAGE = "Read phones number from Dynamodb";
     private static final CreateTopicRequest topicRequest = new CreateTopicRequest(TOPIC);
     private static final AWSCredentials CREDENTIALS = new BasicAWSCredentials(Settings.getAccessKey(), Settings.getSecretKey());
+    private static final String REGION = "us-east-1";
     private static final AmazonSNSClient amazonSNSClient = (AmazonSNSClient) AmazonSNSClientBuilder
             .standard()
             .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
-            .withRegion(Regions.US_EAST_1)
+            .withRegion(REGION)
             .build();
     private static final AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder
             .standard()
-            .withRegion(Regions.US_EAST_1)
+            .withRegion(REGION)
             .withCredentials(new AWSStaticCredentialsProvider(CREDENTIALS))
             .build();
     private static final DynamoDB db = new DynamoDB(amazonDynamoDB);
@@ -63,11 +63,12 @@ public class SqsLambdaHandler implements RequestHandler<SQSEvent, String> {
 
     @Override
     public String handleRequest(SQSEvent event, Context context) {
-        if (event.getRecords().isEmpty()) {
-            LOGGER.info(FINISH_PROCESSING_FUNCTION + ": {}", event.getRecords().size());
+        List<SQSEvent.SQSMessage> records = event.getRecords();
+        if (records.isEmpty()) {
+            LOGGER.info(FINISH_PROCESSING_FUNCTION);
             return FINISH_PROCESSING_FUNCTION;
         }
-        for (SQSEvent.SQSMessage message : event.getRecords()) {
+        for (SQSEvent.SQSMessage message : records) {
             if (Objects.nonNull(message.getBody()) && message.getBody().equals(MESSAGE_BODY_TEMPLATE)) {
                 PhoneNumber phoneNumbers = readPhoneNumbersFromRdsDb();
                 if (Objects.nonNull(phoneNumbers)) {
