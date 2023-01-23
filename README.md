@@ -1,4 +1,4 @@
-                                   lambda_read_from_rds_phone_numbers_filter_save_to_dynamodb
+                                lambda_read_from_rds_phone_numbers_filter_save_to_dynamodb
                                       
 1)About the project.
 
